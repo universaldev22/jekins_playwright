@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        NODE_VERSION = '16'
-        TEST_TIMESTAMP = '2025-05-28 11:09:35'
+        NODE_VERSION = '22'
+        TEST_TIMESTAMP = '2025-05-28 11:51:48'
         PLAYWRIGHT_BROWSERS_PATH = '0'
-        CURRENT_USER = 'waseem'
+        CURRENT_USER = 'nufiansyah'
     }
 
     options {
@@ -17,26 +17,33 @@ pipeline {
     stages {
         stage('Setup') {
             steps {
-                nodejs(nodeJSInstallationName: "Node ${NODE_VERSION}") {
-                    sh 'npm install'
-                }
+                sh '''
+                    export NVM_DIR="$HOME/.nvm"
+                    [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
+                    nvm install ${NODE_VERSION}
+                    nvm use ${NODE_VERSION}
+                    npm install
+                '''
             }
         }
 
         stage('Run Visual Tests') {
             steps {
-                nodejs(nodeJSInstallationName: "Node ${NODE_VERSION}") {
-                    script {
-                        try {
-                            sh 'npm test'
-                        } catch (err) {
-                            archiveArtifacts artifacts: [
-                                'test-results/**/*',
-                                'snapshots/**/*'
-                            ].join(','), allowEmptyArchive: true
-                            
-                            error "Visual regression test failed! Check the test results."
-                        }
+                script {
+                    try {
+                        sh '''
+                            export NVM_DIR="$HOME/.nvm"
+                            [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
+                            nvm use ${NODE_VERSION}
+                            npm test
+                        '''
+                    } catch (err) {
+                        archiveArtifacts artifacts: [
+                            'test-results/**/*',
+                            'snapshots/**/*'
+                        ].join(','), allowEmptyArchive: true
+                        
+                        error "Visual regression test failed! Check the test results."
                     }
                 }
             }
@@ -53,18 +60,6 @@ pipeline {
     }
 
     post {
-        always {
-            publishHTML([
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'playwright-report',
-                reportFiles: 'index.html',
-                reportName: 'Playwright Report',
-                reportTitles: "Visual Tests Report - ${env.TEST_TIMESTAMP}"
-            ])
-        }
-        
         success {
             echo """
             ✅ Visual regression test completed successfully
@@ -82,7 +77,6 @@ pipeline {
                 Timestamp: ${env.TEST_TIMESTAMP}
                 User: ${env.CURRENT_USER}
                 Build URL: ${BUILD_URL}
-                Report: ${BUILD_URL}PlaywrightReport/
                 
                 Please check the test results and visual diffs in the build artifacts.
                 """,
@@ -92,9 +86,7 @@ pipeline {
         }
         
         cleanup {
-            dir("${env.WORKSPACE}") {
-                deleteDir()
-            }
+            cleanWs()
         }
     }
 }
