@@ -1,0 +1,28 @@
+{
+  "name": "visual-regression-tests",
+  "version": "1.0.0",
+  "description": "Visual regression testing with Playwright",
+  "scripts": {
+    "test": "playwright test",
+    "test:update": "playwright test --update-snapshots",
+    "test:ui": "playwright test --ui",
+    "show-report": "playwright show-report",
+    "postinstall": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.35.0",
+    "pixelmatch": "^5.3.0",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.15.0",
+    "@types/pixelmatch": "^5.2.4",
+    "@types/pngjs": "^6.0.1",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "author": "waseem",
+  "license": "MIT"
+}

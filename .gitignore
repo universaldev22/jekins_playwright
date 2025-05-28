@@ -1,0 +1,90 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Testing
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/test-report/
+/reports/
+/coverage/
+
+# Visual regression specific
+/snapshots/**/*-diff.png
+/snapshots/**/*-actual.png
+/snapshots/**/*-expected.png
+/test-results/**/*.png
+/test-results/diff/
+/test-results/**/*-report.html
+
+# Build output
+/dist/
+/build/
+/.next/
+/.nuxt/
+/.output/
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Playwright specific
+/playwright/.browser/
+/playwright-screenshots/
+/playwright-videos/
+/playwright-traces/
+/playwright-artifacts/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Project specific
+# Add your custom ignores here

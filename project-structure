@@ -1,0 +1,11 @@
+visual-regression-tests/
+├── package.json
+├── tsconfig.json
+├── src/
+│   ├── config/
+│   │   └── test.config.ts
+│   └── tests/
+│       └── visual.spec.ts
+├── baseline/
+│   └── .gitkeep
+└── Jenkinsfile
