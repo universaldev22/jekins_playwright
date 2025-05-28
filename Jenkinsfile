@@ -2,28 +2,35 @@ pipeline {
     agent any
 
     environment {
-        NODE_VERSION = '22'
-        TEST_TIMESTAMP = '2025-05-28 11:51:48'
+        NODE_VERSION = '16'
+        TEST_TIMESTAMP = '2025-05-28 12:04:15'
         PLAYWRIGHT_BROWSERS_PATH = '0'
         CURRENT_USER = 'nufiansyah'
     }
 
     options {
         skipDefaultCheckout(false)
-        buildDiscarder(logRotator(daysToKeepStr: '10'))
         timeout(time: 1, unit: 'HOURS')
     }
 
     stages {
         stage('Setup') {
             steps {
-                sh '''
-                    export NVM_DIR="$HOME/.nvm"
-                    [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
-                    nvm install ${NODE_VERSION}
-                    nvm use ${NODE_VERSION}
-                    npm install
-                '''
+                script {
+                    // Clean workspace and prepare environment
+                    deleteDir()
+
+                    // Install Node.js using NVM
+                    sh '''
+                        export NVM_DIR="$HOME/.nvm"
+                        [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
+                        nvm install ${NODE_VERSION}
+                        nvm use ${NODE_VERSION}
+                        
+                        # Install dependencies
+                        npm install
+                    '''
+                }
             }
         }
 
@@ -31,30 +38,41 @@ pipeline {
             steps {
                 script {
                     try {
+                        // Run Playwright tests
                         sh '''
                             export NVM_DIR="$HOME/.nvm"
                             [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
                             nvm use ${NODE_VERSION}
-                            npm test
+                            npm testplaywright
                         '''
                     } catch (err) {
-                        archiveArtifacts artifacts: [
-                            'test-results/**/*',
-                            'snapshots/**/*'
-                        ].join(','), allowEmptyArchive: true
-                        
+                        // Handle failure gracefully and collect artifacts
+                        echo "Tests failed. Archiving results and artifacts."
+                        archiveArtifacts artifacts: 'test-results/**/*,snapshots/**/*', allowEmptyArchive: true
                         error "Visual regression test failed! Check the test results."
                     }
                 }
             }
         }
 
-        stage('Archive Report') {
+        stage('Generate and Publish Report') {
             steps {
-                archiveArtifacts artifacts: [
-                    'playwright-report/**/*',
-                    'test-report/**/*'
-                ].join(','), allowEmptyArchive: true
+                script {
+                    // Ensure Playwright report exists
+                    def reportPath = 'playwright-report'
+                    if (!fileExists(reportPath)) {
+                        error "Specified HTML directory '${reportPath}' does not exist."
+                    }
+
+                    // Publish report using HTML Publisher Plugin
+                    publishHTML([
+                        reportDir: reportPath,
+                        reportFiles: 'index.html',
+                        reportName: 'Playwright Test Report',
+                        keepAll: true,
+                        allowMissing: false
+                    ])
+                }
             }
         }
     }
@@ -62,31 +80,30 @@ pipeline {
     post {
         success {
             echo """
-            ✅ Visual regression test completed successfully
+            ✅ Pipeline completed successfully
             Timestamp: ${env.TEST_TIMESTAMP}
             User: ${env.CURRENT_USER}
             """
         }
-        
+
         failure {
-            emailext (
-                subject: "❌ Visual Regression Test Failed: ${currentBuild.fullDisplayName}",
+            mail(
+                to: 'nufiansyah@example.com',
+                subject: "❌ Pipeline Failed: ${currentBuild.fullDisplayName}",
                 body: """
-                Visual Regression Test Failure Report
+                The pipeline failed during execution.
                 
                 Timestamp: ${env.TEST_TIMESTAMP}
                 User: ${env.CURRENT_USER}
-                Build URL: ${BUILD_URL}
+                Build URL: ${env.BUILD_URL}
                 
-                Please check the test results and visual diffs in the build artifacts.
-                """,
-                recipientProviders: [[$class: 'DevelopersRecipientProvider']],
-                attachLog: true
+                Please check the logs and artifacts for further details.
+                """
             )
         }
-        
+
         cleanup {
-            cleanWs()
+            deleteDir()
         }
     }
 }
