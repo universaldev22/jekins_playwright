@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        NODE_VERSION = '16'
+        NODE_VERSION = '22'
         TEST_TIMESTAMP = '2025-05-28 12:04:15'
         PLAYWRIGHT_BROWSERS_PATH = '0'
-        CURRENT_USER = 'nufiansyah'
+        CURRENT_USER = 'waseem'
     }
 
     options {
@@ -22,8 +22,10 @@ pipeline {
 
                     // Install Node.js using NVM
                     sh '''
-                        export NVM_DIR="$HOME/.nvm"
-                        [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
+                        wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+                        export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+
                         nvm install ${NODE_VERSION}
                         nvm use ${NODE_VERSION}
                         
@@ -40,10 +42,8 @@ pipeline {
                     try {
                         // Run Playwright tests
                         sh '''
-                            export NVM_DIR="$HOME/.nvm"
-                            [ -s "$NVM_DIR/nvm.sh" ] && \\. "$NVM_DIR/nvm.sh"
                             nvm use ${NODE_VERSION}
-                            npm testplaywright
+                            npm run test
                         '''
                     } catch (err) {
                         // Handle failure gracefully and collect artifacts
@@ -88,7 +88,7 @@ pipeline {
 
         failure {
             mail(
-                to: 'nufiansyah@example.com',
+                to: 'waz92dev@gmail.com',
                 subject: "❌ Pipeline Failed: ${currentBuild.fullDisplayName}",
                 body: """
                 The pipeline failed during execution.
