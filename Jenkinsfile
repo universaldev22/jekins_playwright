@@ -9,6 +9,7 @@ pipeline {
     }
 
     options {
+        // Allow the initial SCM checkout, but we will re-checkout after cleaning
         skipDefaultCheckout(false)
         timeout(time: 1, unit: 'HOURS')
     }
@@ -17,14 +18,26 @@ pipeline {
         stage('Setup') {
             steps {
                 script {
+                    // 1) Wipe out the workspace completely
                     deleteDir()
+
+                    // 2) Re-clone your Git repo so package.json is present
+                    checkout scm
+
+                    // 3) Install Node via NVM and dependencies
                     sh '''
+                        # Install NVM
                         wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
+                        # Load NVM into the shell
                         export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
                         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
+                        # Install & use desired Node version
                         nvm install ${NODE_VERSION}
                         nvm use ${NODE_VERSION}
+
+                        # Install project dependencies
                         npm install
                     '''
                 }
@@ -36,14 +49,18 @@ pipeline {
                 script {
                     try {
                         sh '''
-                            . "$NVM_DIR/nvm.sh"
+                            # Ensure NVM is loaded
+                            export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+                            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+                            # Use correct Node version and run tests
                             nvm use ${NODE_VERSION}
                             npm run test
                         '''
                     } catch (err) {
-                        echo "❌ Tests failed. Archiving results and artifacts."
-                        archiveArtifacts artifacts: 'test-results/**/*,snapshots/**/*', allowEmptyArchive: true
-                        error "Visual regression test failed! Check the archived artifacts."
+                        echo "❌ Visual regression tests failed. Archiving artifacts..."
+                        archiveArtifacts artifacts: 'test-results/**/*, snapshots/**/*', allowEmptyArchive: true
+                        error "Visual regression test failed! See archived snapshots for diffs."
                     }
                 }
             }
@@ -52,12 +69,12 @@ pipeline {
         stage('Generate and Publish Report') {
             steps {
                 script {
-                    def reportPath = 'playwright-report'
-                    if (!fileExists(reportPath)) {
-                        error "HTML report directory '${reportPath}' not found."
+                    def reportDir = 'playwright-report'
+                    if (!fileExists(reportDir)) {
+                        error "HTML report directory '${reportDir}' not found."
                     }
                     publishHTML([
-                        reportDir:    reportPath,
+                        reportDir:    reportDir,
                         reportFiles:  'index.html',
                         reportName:   'Playwright Test Report',
                         keepAll:      true,
@@ -84,10 +101,11 @@ pipeline {
             User:      ${env.CURRENT_USER}
             Build URL: ${env.BUILD_URL}
             """
-            // Artifacts were already archived in the Run Visual Tests stage
+            // Artifacts have already been archived in the Run Visual Tests stage
         }
 
         cleanup {
+            // Final workspace cleanup
             deleteDir()
         }
     }
